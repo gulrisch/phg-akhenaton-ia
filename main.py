@@ -54,42 +54,44 @@ def get_db():
     return psycopg2.connect(DATABASE_URL)
 
 def init_db():
-    try:
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS oeuvres (
-                id SERIAL PRIMARY KEY, uid UUID DEFAULT gen_random_uuid(),
-                titre TEXT NOT NULL, sous_titre TEXT, auteur TEXT NOT NULL,
-                email_auteur TEXT NOT NULL, categorie TEXT, description TEXT,
-                tags TEXT, biographie TEXT, liens_auteur TEXT,
-                fichier_url TEXT, cover_url TEXT,
-                prix_achat NUMERIC(10,2), prix_location NUMERIC(10,2),
-                prix_stream NUMERIC(10,2), acces_gratuit BOOLEAN DEFAULT FALSE,
-                lien_externe TEXT, statut TEXT DEFAULT 'en_attente',
-                stripe_product_id TEXT, stripe_price_achat TEXT,
-                stripe_price_location TEXT, stripe_price_stream TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS avis (
-                id SERIAL PRIMARY KEY, oeuvre_id INTEGER REFERENCES oeuvres(id),
-                nom TEXT NOT NULL, email TEXT, texte TEXT NOT NULL,
-                note INTEGER NOT NULL, verifie BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS stripe_products (
-                id SERIAL PRIMARY KEY, book_id TEXT UNIQUE,
-                product_id TEXT, price_achat TEXT,
-                price_location TEXT, price_stream TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-        """)
-        conn.commit()
-        cur.close()
-        conn.close()
-        print("✅ Tables prêtes.")
-    except Exception as e:
-        print(f"⚠️ DB init: {e}")
+    tables = [
+        """CREATE TABLE IF NOT EXISTS oeuvres (
+            id SERIAL PRIMARY KEY, uid UUID DEFAULT gen_random_uuid(),
+            titre TEXT NOT NULL, sous_titre TEXT, auteur TEXT NOT NULL,
+            email_auteur TEXT NOT NULL, categorie TEXT, description TEXT,
+            tags TEXT, biographie TEXT, liens_auteur TEXT,
+            fichier_url TEXT, cover_url TEXT,
+            prix_achat NUMERIC(10,2), prix_location NUMERIC(10,2),
+            prix_stream NUMERIC(10,2), acces_gratuit BOOLEAN DEFAULT FALSE,
+            lien_externe TEXT, statut TEXT DEFAULT 'en_attente',
+            stripe_product_id TEXT, stripe_price_achat TEXT,
+            stripe_price_location TEXT, stripe_price_stream TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS avis (
+            id SERIAL PRIMARY KEY, oeuvre_id INTEGER,
+            nom TEXT NOT NULL, email TEXT, texte TEXT NOT NULL,
+            note INTEGER NOT NULL, verifie BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS stripe_products (
+            id SERIAL PRIMARY KEY, book_id TEXT UNIQUE,
+            product_id TEXT, price_achat TEXT,
+            price_location TEXT, price_stream TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+    ]
+    for sql in tables:
+        try:
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute(sql)
+            conn.commit()
+            cur.close()
+            conn.close()
+        except Exception as e:
+            print(f"⚠️ Table: {e}")
+    print("✅ Tables prêtes.")
 
 def create_stripe_products():
     try:
